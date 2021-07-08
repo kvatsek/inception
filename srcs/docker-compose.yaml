@@ -1,0 +1,65 @@
+version: '3.3'
+
+volumes:
+    wp:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: /home/tatiana/wp
+    db:
+        driver: local
+        driver_opts:
+            type: none
+            o: bind
+            device: /home/tatiana/db 
+
+services:
+  mariadb:
+    image: mariadb
+    container_name: mariadb
+    build: requirements/mariadb/
+    restart: always
+    env_file: .env
+    volumes:
+      - db:/var/lib/mysql
+    networks:
+      - app
+   
+  wp:
+    image: wordpress
+    container_name: wordpress
+    build: requirements/wordpress/
+    depends_on:
+      - mariadb
+    restart: always
+    env_file: .env
+    environment:
+      - WORDPRESS_DB_HOST=mariadb
+      - WORDPRESS_DB_USER=$MYSQL_USER
+      - WORDPRESS_DB_PASSWORD=$MYSQL_PASSWORD
+      - WORDPRESS_DB_NAME=$MYSQL_DATABASE
+    volumes:
+      - wp:/var/www/html
+      - ./requirements/wordpress/conf:/etc/php7/php-fpm.d/    
+    networks:
+      - app
+
+  nginx:
+    image: nginx
+    build: requirements/nginx/
+    depends_on:
+      - wp
+    container_name: nginx
+    restart: always
+    ports:
+      - "443:443"
+    volumes:
+      - wp:/var/www/html
+      - ./requirements/nginx/conf:/etc/nginx/conf.d
+    networks:
+      - app
+    
+networks:
+  app:
+
